@@ -1,6 +1,8 @@
 import React, { Component } from 'react'
 import axios from 'axios';
 import { ToastContainer, toast, Bounce   } from 'react-toastify';
+import { FontAwesomeIcon} from "@fortawesome/react-fontawesome";
+import { faPlus, faPencil, faTrashCan, faSearch } from "@fortawesome/free-solid-svg-icons"; // import specific icons
 import 'react-toastify/dist/ReactToastify.css';
 export default class Notes extends Component {
 
@@ -28,14 +30,14 @@ export default class Notes extends Component {
 
    
     fetch_data = async() => {
-        const res = await axios.get("http://localhost:8080/notes")
-        .then(res => {  
-            if(!res.statusText) throw new Error(`Status: ${res.status}`)
-            this.setState({list:res.data, loding:false})
-        }).catch(err => {
-            console.error(err);
-            this.setState({loding:false})
-        })
+        await axios.get("http://localhost:8080/notes")
+            .then(res => {  
+                if(!res.statusText) throw new Error(`Status: ${res.status}`)
+                this.setState({list:res.data, loding:false})
+            }).catch(err => {
+                console.error(err);
+                this.setState({loding:false})
+            })
     }
 
 
@@ -45,9 +47,17 @@ export default class Notes extends Component {
         
         if(status){
             card.classList.remove('d-none')
+            card.classList.add("fade-in");
+            setTimeout(() => {
+                card.classList.add("show"); 
+            }, 30);
         }else{
             form.reset()
-            card.classList.add('d-none')
+            card.classList.remove("show"); 
+            setTimeout(() => {
+                card.classList.add("d-none");
+                card.classList.remove("fade-in"); 
+            }, 300); 
         }
 
    }
@@ -65,12 +75,20 @@ export default class Notes extends Component {
 
     handelEditCard = (id, status, title = null, content = null) => {
         const edit_card = document.getElementById("editCard_" + id);
+        const infoCard = document.getElementById('info_card_'+id);
         if(status){
             const visibleCard = document.querySelector('.editCard:not(.d-none)');
+            const hiddeninfoCard = document.querySelector('.info_card.d-none');
             if(visibleCard !== null){
                 const cardid = visibleCard.id
                 const prevEditCard = document.getElementById(cardid);
                 prevEditCard.classList.add('d-none')
+            }
+
+            if(hiddeninfoCard !== null){
+                const hiddeninfoCardId = hiddeninfoCard.id;
+                const previnfoCard = document.getElementById(hiddeninfoCardId);
+                previnfoCard.classList.remove('d-none')
             }
             
             if(edit_card){
@@ -80,6 +98,7 @@ export default class Notes extends Component {
                     note_id:id
                 })
                 edit_card.classList.remove('d-none');
+                infoCard.classList.add('d-none');
             }
         }else{     
               this.setState({
@@ -87,6 +106,7 @@ export default class Notes extends Component {
                     content_update:"",
                     id:""
                 })       
+            infoCard.classList.remove('d-none');    
             edit_card.classList.add('d-none');
         }
     }
@@ -95,51 +115,70 @@ export default class Notes extends Component {
         const { list, loading } = this.state;
 
         if (loading) {
-            return <div>Loading…</div>;
+            return <div>Loading…</div>
         }
 
         if (list.length === 0) {
-            return <div>No notes yet!</div>;
+            return <div>No notes yet!</div>
         }
 
         return (
-            <ol>
-                {list.map(data => (
-                    <li key={data.id}>
-                        <div className="d-flex justify-content-between mt-2">
-                            <div className='d-flex gap-3'>
-                                <div>{data.title}</div>
-                                <div>{data.content}</div>
-                            </div>
-                            <div>
-                                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                                    <button type="button" class="btn btn-warning" onClick={() => this.handelEditCard(data.id, true, data.title, data.content)}>edit</button>
-                                    <button type="button" class="btn btn-danger" onClick={() => this.handelDeletion(data.id)}>dete</button>
+            <div className='container'>
+                <div className='row row-cols-2 g-2'>
+                        {list.map(data => (
+                            <div className='col'>
+                                <div key={data.id} className='card mt-2 info_card shadow-sm z-3' id={`info_card_`+data.id}>
+                                    <div className='card-body'>
+                                        <div className="d-flex justify-content-between mt-2">
+                                            <div>
+                                            <h5 class="card-title">{data.title}</h5>
+                                                <div>{data.content}</div>
+                                            </div>
+                                            <div className='row'>
+                                                <div className='d-md-grid justify-content-md-end'>
+                                                    <small className="text-muted"> created at: {new Date(data.created_at).toLocaleString()}</small>
+                                                    <small className="text-muted"> {data.updated_at !== null ?  `updated at: ` + new Date(data.updated_at).toLocaleString(): "" }</small>
+                                                </div>
+                                                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                                    <button type="button" class="btn btn-sm edit-btn" onClick={() => this.handelEditCard(data.id, true, data.title, data.content)}><FontAwesomeIcon icon={faPencil} /></button>
+                                                    <button type="button" class="btn btn-sm delete-btn" onClick={() => this.handelDeletion(data.id)}><FontAwesomeIcon icon={faTrashCan} /></button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                
+                                    </div>
+                                </div>
+                                <div className="card editCard d-none mt-2 shadow-sm" id={'editCard_'+data.id}>
+                                    <div className="card-body">
+                                        <div className='d-flex justify-content-between'>
+                                            <div>
+                                                <h5 class="card-title">Edit Note</h5>
+                                            </div>
+                                            <div>
+                                                <button type="button" class="btn-close" aria-label="Close" onClick={() => this.handelEditCard(data.id, false)}></button>
+                                            </div>
+                                        </div>
+                                        <form id='note-form' onSubmit={this.handleUpdate}>
+                                            <div class="mb-3">
+                                                <label for="title_update" className="form-label">Title</label>
+                                                <input type='text' name='title_update' id='title_update' className='form-control' value={this.state.title_update} onChange={(e) => this.changeInput({e, type:"title_update"})}></input>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="content_update" className="form-label">Content</label>
+                                                <textarea  id='content_update' name='content_update' className='form-control' rows="3" value={this.state.content_update} onChange={(e) => this.changeInput({e, type:"content_update"})}></textarea>
+                                            </div>
+                                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                                <button  class="btn btn-success me-md-2" type="submit">Save</button>
+                                                <button class="btn btn-secondary" type="button" onClick={() => this.handelEditCard(data.id, false)}>Cancel</button>
+                                            </div>
+                                        </form>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <div className="card editCard d-none mt-2" id={'editCard_'+data.id}>
-                            <div className="card-body">
-                                <form id='note-form' onSubmit={this.handleUpdate}>
-                                    <div class="mb-3">
-                                        <label for="title_update" className="form-label">Title</label>
-                                        <input type='text' name='title_update' id='title_update' className='form-control' value={this.state.title_update} onChange={(e) => this.changeInput({e, type:"title_update"})}></input>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="content_update" className="form-label">Content</label>
-                                        <textarea  id='content_update' name='content_update' className='form-control' rows="3" value={this.state.content_update} onChange={(e) => this.changeInput({e, type:"content_update"})}></textarea>
-                                    </div>
-                                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                                        <button  class="btn btn-success me-md-2" type="submit">Save</button>
-                                        <button class="btn btn-secondary" type="button" onClick={() => this.handelEditCard(data.id, false)}>Cancel</button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    </li>
-
-                ))}
-            </ol>
+                        ))}
+                    </div>
+            </div>
+            
         );
     }
 
@@ -247,11 +286,19 @@ export default class Notes extends Component {
             <div>
                 <button className='btn btn-primary' 
                 onClick={() => this.cardStatus(true)}
-                > + Add Notes</button>
+                > <FontAwesomeIcon icon={faPlus} /> Add Notes</button>
             </div>
         </div>
-        <div className="card d-none" id='addCard'>
+        <div className="card d-none shadow-sm" id='addCard'>
             <div className="card-body">
+                <div className='d-flex justify-content-between'>
+                    <div>
+                        <h5 class="card-title">Add Note</h5>
+                    </div>
+                    <div>
+                        <button type="button" class="btn-close" aria-label="Close" onClick={() => this.cardStatus(false)}></button>
+                    </div>
+                </div>
                 <form id='note-form' onSubmit={this.handelSubmit}>
                     <div class="mb-3">
                         <label for="title" className="form-label">Title</label>
@@ -268,7 +315,6 @@ export default class Notes extends Component {
                 </form>
             </div>
         </div>
-
         <div className='mt-2'>
                 {this.contentList()}
         </div>
