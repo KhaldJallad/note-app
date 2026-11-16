@@ -1,182 +1,164 @@
-# 📝 Quick Notes — Full-Stack Notes App
+# 📝 Quick Notes — React + Express + MySQL
 
-A notes application built with **React**, **Node.js**, **Express**, and **MySQL**. Users can create, view, edit, and delete notes through a React interface connected to a REST-style backend.
-
-> **Project status:** Portfolio project. The repository contains a frontend/backend port mismatch that must be corrected before running it locally. See [Local setup](#local-setup) and [Known limitations](#known-limitations).
+A full-stack note-taking web application built with **React**, **Node.js**, **Express**, and **MySQL**. Create, view, edit, and delete saved notes in a responsive interface.
 
 ## Features
 
-- **Create notes** with a title and content.
-- **View saved notes** loaded from a MySQL database.
-- **Edit notes** using an inline editing form.
-- **Delete notes** and refresh the list.
-- **Toast notifications** for successful create, update, and delete actions.
-- **Creation and update timestamps** displayed on note cards when available.
-- **Responsive Bootstrap-based interface** with Font Awesome icons.
+- Create notes with a title and content
+- View saved notes with creation/update timestamps
+- Edit or delete existing notes
+- See loading states, error messages, and success toast notifications
+- Responsive layout using Bootstrap 5
 
-Notes are stored in **MySQL**, not browser local storage. The current code does **not** implement note search, filtering, authentication, or offline sync.
+> Notes are stored in a local **MySQL** database. The application does not provide user accounts, authorization, search, or offline storage.
 
 ## Tech Stack
 
-| Layer | Technologies |
+| Area | Technology |
 | --- | --- |
-| Frontend | React 19, JavaScript, Create React App (`react-scripts`), Bootstrap 5 |
-| UI | Font Awesome, React Toastify |
+| Frontend | React 19, JavaScript, Create React App, Bootstrap 5 |
+| UI feedback and icons | React Toastify, Font Awesome |
 | HTTP client | Axios |
 | Backend | Node.js, Express 5 |
-| Database | MySQL, `mysql2` |
-| Configuration | Environment variables loaded with `dotenv` |
+| Database | MySQL, mysql2 (parameterized queries) |
+| Configuration | dotenv |
 
 ## Project Structure
 
 ```text
 note-app/
 ├── src/
-│   ├── App.js                  # React app entry component
-│   ├── index.js                # React DOM bootstrap
-│   └── components/
-│       └── Notes.js           # Notes UI and API requests
+│   ├── App.js
+│   ├── App.test.js
+│   └── components/Notes.js
 ├── backend/
-│   ├── database.js             # Express server, database pool, API endpoints
+│   ├── database.js
+│   ├── database.test.js
+│   ├── schema.sql
+│   ├── .env.example
 │   └── package.json
-├── package.json                # Frontend scripts and dependencies
+├── .gitignore
+├── package.json
 └── README.md
 ```
 
-## Local Setup
+## Run Locally
 
-### Prerequisites
+### 1. Prerequisites
 
-- Node.js and npm
-- A running MySQL server
-- A MySQL database and a `notes` table
+Install **Node.js 18+**, npm, and MySQL. Make sure the MySQL service is running.
 
-### 1. Clone the repository
+### 2. Clone and install
 
 ```bash
 git clone https://github.com/KhaldJallad/note-app.git
 cd note-app
-```
-
-### 2. Install dependencies
-
-```bash
 npm install
 cd backend
 npm install
 ```
 
-**Current dependency note:** `backend/database.js` imports `dotenv`, but the backend's own `package.json` does not list it. Installing the root dependencies as shown above supplies it via Node.js parent-directory module resolution. A future backend cleanup should declare `dotenv` directly in `backend/package.json`.
+### 3. Create your database
 
-### 3. Create the database
+Run `backend/schema.sql` in MySQL. From the MySQL CLI (while in `backend`):
 
-Create a MySQL database and table that provide the fields used by the existing SQL queries. For example:
-
-```sql
-CREATE DATABASE notes_app;
-USE notes_app;
-
-CREATE TABLE notes (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  title VARCHAR(255) NOT NULL,
-  content TEXT NOT NULL,
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME NULL
-);
+```bash
+mysql -u root -p < schema.sql
 ```
 
-This is a **suggested schema inferred from the application code**, not a database migration included in the repository.
+This creates the `quick_notes_app` database and the `notes` table, if they don't already exist. Adjust the MySQL user to your local configuration.
 
-### 4. Configure the backend
+### 4. Configure backend environment
 
-Create `backend/.env` with your own local database settings:
+Copy the example to a **local** `backend/.env` file:
+
+```bash
+cp .env.example .env
+```
+
+On Windows, you can also copy the file in File Explorer.
+
+Set your own credentials and desired ports:
 
 ```dotenv
+PORT=8080
 MYSQL_HOST=127.0.0.1
+MYSQL_PORT=3306
 MYSQL_USER=your_mysql_user
 MYSQL_PASSWORD=your_mysql_password
-MYSQL_DATABASE=notes_app
+MYSQL_DATABASE=quick_notes_app
+FRONTEND_ORIGIN=http://localhost:3000
 ```
 
-Do not commit this file or real database credentials to GitHub.
+The Express API defaults to port **8080**; MySQL normally uses **3306**. Those are **different** services. The backend now reads environment variables directly from `backend/.env`.
 
-**Important port fix:** The current `backend/database.js` contains:
-
-```js
-const port = 3306;
-```
-
-The frontend, however, sends requests to `http://localhost:8080`. Before running the app, change the Express server port line in `backend/database.js` to:
-
-```js
-const port = 8080;
-```
-
-MySQL normally uses port 3306 for its own service; the Express API should run on a separate port. **This README update documents the required change but does not modify the application code.**
+**Never commit `.env` or real credentials.** The repository's `.gitignore` excludes local environment files. A previously tracked local env file was removed from the current source tree; Git history still needs separate handling if it ever contained real secrets.
 
 ### 5. Start the backend
 
-From the `backend` directory:
+From the `backend` folder:
 
 ```bash
 npm start
 ```
 
-With the port change above, the API should be available at `http://localhost:8080`.
+The API should start at `http://localhost:8080`. You can check `http://localhost:8080/` for a basic response. Note: the API can start even if the database connection is not working; check `/notes` to confirm that queries succeed.
 
 ### 6. Start the frontend
 
-Open a second terminal from the repository root:
+From the repository root in a second terminal:
 
 ```bash
 npm start
 ```
 
-Create React App typically opens the frontend at `http://localhost:3000`.
+The React development server normally runs at `http://localhost:3000`.
 
-The frontend currently uses a hardcoded API URL pointing to `http://localhost:8080`.
+By default, React calls `http://localhost:8080`. To change this, create a **local** `.env` at the repository root with:
 
-## API Endpoints
+```dotenv
+REACT_APP_API_URL=http://localhost:8080
+```
 
-Implemented in `backend/database.js`:
+Restart the frontend after changing React environment variables.
+
+## API Reference
 
 | Method | Endpoint | Purpose | Request body |
 | --- | --- | --- | --- |
-| `GET` | `/notes` | Retrieve saved notes | — |
-| `POST` | `/insert` | Create a note | `{ "title": "...", "content": "..." }` |
-| `POST` | `/update` | Update a note | `{ "note_id": 1, "title_update": "...", "content_update": "..." }` |
-| `POST` | `/delete` | Delete a note | `{ "id": 1 }` |
+| GET | `/notes` | List notes | — |
+| POST | `/insert` | Create a note | `{"title":"Title","content":"Text"}` |
+| POST | `/update` | Update a note | `{"note_id":1,"title_update":"New title","content_update":"New text"}` |
+| POST | `/delete` | Delete a note | `{"id":1}` |
 
-All routes are served by the local Express backend. These are the application's **existing** endpoints, not proposed replacements.
+The API validates note input and IDs, uses parameterized SQL queries, returns JSON responses, and provides meaningful HTTP status codes (including `400`, `404`, and `500`).
 
-## How It Works
+## Tests
 
-1. The React notes component requests `GET /notes` when mounted.
-2. Express reads the saved notes from MySQL using a connection pool.
-3. The UI renders note cards, including available timestamps and edit/delete controls.
-4. User actions send Axios requests to the matching Express endpoints.
-5. After a successful change, the UI fetches the notes again and displays a toast notification.
+Backend route and validation tests (using a mocked database):
 
-## Known Limitations
+```bash
+cd backend
+npm test
+```
 
-The repository is useful for demonstrating frontend/backend integration, but it still has areas to improve:
+Frontend component tests:
 
-- **Port mismatch:** The backend listens on `3306` while the frontend targets `8080`; see the setup fix above.
-- **Hardcoded API URL:** Move the frontend's API base URL into an environment-based configuration.
-- **Backend dependencies:** Declare `dotenv` directly in the backend package.
-- **API validation and responses:** Add input validation, consistent HTTP status codes, and safer error messages.
-- **Security:** Add authentication/authorization if notes will be used by multiple users.
-- **Secrets:** Ensure `.env` files are ignored by Git before sharing or deploying.
-- **Maintainability:** Refactor direct DOM manipulation in the React component and add targeted tests.
+```bash
+# from repository root
+CI=true npm test -- --watch=false
+```
 
-## Possible Next Steps
+The automated backend tests do **not** replace testing with a real MySQL server. Verify create, list, edit, and delete locally after configuration.
 
-- Add search and note filtering.
-- Support user accounts and private notes.
-- Add loading, empty, and error states for all API operations.
-- Add a live demo and screenshots once the app runs reliably.
-- Provide a database migration or setup script.
+## Known Limitations and Future Improvements
+
+- This is a **single-user learning/portfolio project**: there is no authentication, so do not expose it publicly with unrestricted write access.
+- Add integration tests against a test MySQL database.
+- Add screenshots and a safe, hosted demo after deployment and security planning.
+- Add search/filtering, pagination, and optional user accounts.
+- Consider upgrading the Create React App tooling in a future maintenance update.
 
 ## Author
 
-**Khaled Jallad** — [GitHub @KhaldJallad](https://github.com/KhaldJallad)
+**Khaled Jallad** · [GitHub](https://github.com/KhaldJallad)
